@@ -28,7 +28,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [[ `git status --porcelain` ]]; then
-            git add merged_adblock.list
+            git add merged_adblock.list merged_adblock_stats.txt
+
             git commit -m "Update merged_adblock.list"
             git push
           else
