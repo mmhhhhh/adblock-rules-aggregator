@@ -2,8 +2,8 @@ name: Update Adblock Rules
 
 on:
   schedule:
-    - cron: '0 18 * * *'  # 每天北京时间凌晨2点运行
-  workflow_dispatch:
+    - cron: '0 18 * * *'  # UTC 18点 = 北京时间凌晨2点
+  workflow_dispatch:  # 手动触发
 
 jobs:
   update:
