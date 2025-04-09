@@ -1,0 +1,36 @@
+name: Update Adblock Rules
+
+on:
+  schedule:
+    - cron: '0 18 * * *'  # UTC 18点 = 北京时间凌晨2点
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Requests
+        run: pip install requests
+
+      - name: Run Rule Updater
+        run: python scripts/update_adblock_rules.py
+
+      - name: Commit & Push if Changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [[ `git status --porcelain` ]]; then
+            git add merged_adblock.list
+            git commit -m "Update merged_adblock.list"
+            git push
+          else
+            echo "No changes to commit."
+          fi
