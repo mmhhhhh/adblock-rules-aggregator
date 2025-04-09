@@ -4,12 +4,13 @@ from pathlib import Path
 
 URLS = [
     "https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/anti-ad-surge.txt",
-    "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockclashlite.list",
+    # "https://raw.githubusercontent.com/21theidai/adblockfilters/main/rules/adblockclashlite.list",  # 已失效
     "https://johnshall.github.io/Shadowrocket-ADBlock-Rules-Forever/sr_ad_only.conf",
     "https://raw.githubusercontent.com/Cats-Team/AdRules/main/adrules.list"
 ]
 
 OUTPUT_FILE = Path("merged_adblock.list")
+STATS_FILE = Path("merged_adblock_stats.txt")
 
 def download_rules(urls):
     all_rules = []
@@ -37,8 +38,19 @@ def main():
     original_count = len(rules)
     unique_rules = sorted(set(rules))
     deduplicated_count = len(unique_rules)
-    print(f"Merged {original_count} rules, removed {original_count - deduplicated_count} duplicates.")
-    save_if_changed(unique_rules, OUTPUT_FILE)
+    removed_count = original_count - deduplicated_count
+
+    print(f"Merged {original_count} rules, removed {removed_count} duplicates.")
+    print(f"Updated merged_adblock.list with {deduplicated_count} rules.")
+
+    changed = save_if_changed(unique_rules, OUTPUT_FILE)
+
+    stats_text = (
+        f"Total downloaded rules: {original_count}\n"
+        f"Duplicates removed: {removed_count}\n"
+        f"Final rules written: {deduplicated_count}\n"
+    )
+    STATS_FILE.write_text(stats_text)
 
 if __name__ == "__main__":
     main()
