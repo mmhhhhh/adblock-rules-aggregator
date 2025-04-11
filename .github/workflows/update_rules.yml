@@ -2,34 +2,35 @@ name: Update Adblock Rules
 
 on:
   schedule:
-    - cron: '0 18 * * *'  # UTC 18点 = 北京时间凌晨2点
-  workflow_dispatch:  # 手动触发
+    - cron: '0 2 * * *'  # 每天凌晨 2 点（UTC）
+  workflow_dispatch:     # 支持手动触发
 
 jobs:
   update:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: 3.10
 
-      - name: Install Requests
-        run: pip install requests
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      - name: Run Rule Updater
+      - name: Run update script
         run: python scripts/update_adblock_rules.py
 
-      - name: Commit & Push if Changed
+      - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if [[ `git status --porcelain` ]]; then
-            git add merged_adblock.list
-            git commit -m "Update merged_adblock.list"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [[ -n $(git status --porcelain) ]]; then
+            git add merged_adblock.list merged_adblock.yaml
+            git commit -m "chore: update adblock rules on $(date +'%Y-%m-%d')"
             git push
           else
             echo "No changes to commit."
