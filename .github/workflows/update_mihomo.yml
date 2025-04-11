@@ -1,64 +1,49 @@
-name: Auto Download Latest Mihomo
+name: Update Mihomo
 
 on:
   schedule:
-    - cron: '0 0 1,15 * *'  # 每月1号和15号
-  workflow_dispatch:
+    - cron: '0 0 1,15 * *'  # 每月1号和15号执行
+  workflow_dispatch:  # 允许手动运行
 
 jobs:
-  update-mihomo:
+  download-latest-mihomo:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Get latest version tag from GitHub API
+      - name: Get latest version tag from GitHub
         id: get_version
+        shell: bash
         run: |
-          $response = Invoke-RestMethod -Uri "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest"
-          $tag = $response.tag_name
-          echo "Latest version is $tag"
-          echo "version=$tag" >> $env:GITHUB_OUTPUT
-        shell: pwsh
+          LATEST=$(curl -s https://api.github.com/repos/MetaCubeX/mihomo/releases/latest | jq -r '.tag_name')
+          echo "LATEST_TAG=$LATEST" >> $GITHUB_ENV
+          echo "Latest Mihomo version: $LATEST"
 
-      - name: Download Mihomo (no go suffix)
+      - name: Download and extract Mihomo (non-go version)
         shell: pwsh
         run: |
-          $version = "${{ steps.get_version.outputs.version }}"
+          $version = "${env:LATEST_TAG}"
           $url = "https://github.com/MetaCubeX/mihomo/releases/download/$version/mihomo-windows-amd64-compatible-$version.zip"
+          Write-Host "Downloading from $url"
 
-          Write-Host "Downloading: $url"
           Invoke-WebRequest -Uri $url -OutFile "mihomo.zip" -TimeoutSec 300
-
           Expand-Archive -Path "mihomo.zip" -DestinationPath . -Force
           Remove-Item "mihomo.zip"
 
           $exe = Get-ChildItem -Recurse -Filter "*mihomo*.exe" | Select-Object -First 1
           if ($exe) {
             Rename-Item -Path $exe.FullName -NewName "mihomo.exe" -Force
-            Write-Host "mihomo.exe is ready."
+            Write-Host "mihomo.exe ready."
           } else {
             throw "mihomo.exe not found after extraction"
           }
 
-          # 生成或更新版本记录文件
-          Set-Content -Path "mihomo_version.txt" -Value $version -Encoding UTF8
-          Write-Host "Updated version record: $version"
-
-      - name: Commit and Push if Changed
+      - name: Commit and push if updated
+        shell: bash
         env:
           TOKEN: ${{ secrets.TOKEN }}
-        shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add mihomo.exe mihomo_version.txt
-
-          if (git status --porcelain) {
-            $date = Get-Date -Format "yyyy-MM-dd"
-            git commit -m "chore: update mihomo.exe to latest ($date)"
-            git push https://${{ secrets.TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }} --force
-          } else {
-            Write-Host "No changes to commit."
+          git config user.email "41898282+github-actions[bot]@users.noreply.github
