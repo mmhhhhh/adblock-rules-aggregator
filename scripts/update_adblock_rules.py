@@ -9,8 +9,8 @@ URLS = [
     "https://raw.githubusercontent.com/Cats-Team/AdRules/main/adrules.list"
 ]
 
-OUTPUT_LIST_FILE = Path("merged_adblock.list")
-OUTPUT_YAML_FILE = Path("merged_adblock.yaml")
+OUTPUT_LIST_FILE = Path("adblock_reject.list")
+OUTPUT_YAML_FILE = Path("adblock_reject.yaml")
 
 def download_rules(urls):
     all_rules = []
