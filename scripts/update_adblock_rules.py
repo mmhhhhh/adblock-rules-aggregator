@@ -1,5 +1,6 @@
 import requests
 import hashlib
+import yaml
 from pathlib import Path
 
 URLS = [
@@ -8,16 +9,20 @@ URLS = [
     "https://raw.githubusercontent.com/Cats-Team/AdRules/main/adrules.list"
 ]
 
-OUTPUT_FILE = Path("merged_adblock.list")
+OUTPUT_LIST_FILE = Path("merged_adblock.list")
+OUTPUT_YAML_FILE = Path("merged_adblock.yaml")
 
 def download_rules(urls):
     all_rules = []
     for url in urls:
-        print(f"Downloading: {url}")
-        response = requests.get(url)
-        response.raise_for_status()
-        lines = response.text.splitlines()
-        all_rules.extend([line.strip() for line in lines if line.strip() and not line.strip().startswith("#")])
+        try:
+            print(f"Downloading: {url}")
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            lines = response.text.splitlines()
+            all_rules.extend([line.strip() for line in lines if line.strip() and not line.strip().startswith("#")])
+        except requests.RequestException as e:
+            print(f"Failed to download {url}: {e}")
     return all_rules
 
 def save_if_changed(new_content, filepath):
@@ -25,10 +30,27 @@ def save_if_changed(new_content, filepath):
     if filepath.exists():
         old_text = filepath.read_text()
         if hashlib.sha256(old_text.encode()) == hashlib.sha256(new_text.encode()):
-            print("No change in rules. Skipping write.")
+            print(f"No change in {filepath.name}. Skipping write.")
             return False
     filepath.write_text(new_text)
-    print(f"Updated {filepath} with {len(new_content)} rules.")
+    print(f"Updated {filepath.name} with {len(new_content)} rules.")
+    return True
+
+def generate_yaml(rules):
+    yaml_data = {
+        "payload": rules
+    }
+    return yaml.dump(yaml_data, allow_unicode=True)
+
+def save_yaml_if_changed(rules, filepath):
+    yaml_text = generate_yaml(rules)
+    if filepath.exists():
+        old_text = filepath.read_text()
+        if hashlib.sha256(old_text.encode()) == hashlib.sha256(yaml_text.encode()):
+            print(f"No change in {filepath.name}. Skipping write.")
+            return False
+    filepath.write_text(yaml_text)
+    print(f"Updated {filepath.name} with {len(rules)} rules.")
     return True
 
 def main():
@@ -37,7 +59,9 @@ def main():
     unique_rules = sorted(set(rules))
     deduplicated_count = len(unique_rules)
     print(f"Merged {original_count} rules, removed {original_count - deduplicated_count} duplicates.")
-    save_if_changed(unique_rules, OUTPUT_FILE)
+    
+    save_if_changed(unique_rules, OUTPUT_LIST_FILE)
+    save_yaml_if_changed(unique_rules, OUTPUT_YAML_FILE)
 
 if __name__ == "__main__":
     main()
