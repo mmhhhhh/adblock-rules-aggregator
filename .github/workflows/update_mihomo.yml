@@ -34,4 +34,31 @@ jobs:
           Expand-Archive -Path "mihomo.zip" -DestinationPath . -Force
           Remove-Item "mihomo.zip"
 
-          $exe = Get-ChildItem -Recurse -Filter "*mihomo*.exe"
+          $exe = Get-ChildItem -Recurse -Filter "*mihomo*.exe" | Select-Object -First 1
+          if ($exe) {
+            Rename-Item -Path $exe.FullName -NewName "mihomo.exe" -Force
+            Write-Host "mihomo.exe is ready."
+          } else {
+            throw "mihomo.exe not found after extraction"
+          }
+
+          # 生成或更新版本记录文件
+          Set-Content -Path "mihomo_version.txt" -Value $version -Encoding UTF8
+          Write-Host "Updated version record: $version"
+
+      - name: Commit and Push if Changed
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add mihomo.exe mihomo_version.txt
+
+          if (git status --porcelain) {
+            $date = Get-Date -Format "yyyy-MM-dd"
+            git commit -m "chore: update mihomo.exe to latest ($date)"
+            git push https://${{ secrets.TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }} --force
+          } else {
+            Write-Host "No changes to commit."
